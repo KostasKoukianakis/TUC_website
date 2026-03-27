@@ -1,26 +1,727 @@
 @import "tailwindcss";
 
+/*
+ * Tokens + motion (WQF-style palette). Sans: Open Sans όπως tuc.gr + Helvetica stack.
+ * Mono: Azeret Mono — αρχείο στο public/fonts/
+ */
+
+@font-face {
+  font-display: swap;
+  font-family: "Roc Grotesk";
+  font-style: normal;
+  font-weight: 400;
+  src: url("/fonts/roc-grotesk-regular.woff2") format("woff2");
+}
+
+@font-face {
+  font-display: swap;
+  font-family: "Roc Grotesk";
+  font-style: normal;
+  font-weight: 500;
+  src: url("/fonts/roc-grotesk-medium.woff2") format("woff2");
+}
+
+@font-face {
+  font-display: swap;
+  font-family: "Azeret Mono";
+  font-style: normal;
+  font-weight: 400 500;
+  src: url("/fonts/azeret-mono-regular.otf") format("opentype");
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --easing: cubic-bezier(0.62, 0.16, 0.13, 1.01);
+  /* Λεπτά gutters σε όλο το viewport (WQF-style), όχι στενό max-width container */
+  --page-gutter-x: clamp(1rem, 2.5vw, 2.5rem);
+  --header-height: 4rem;
+  /* Ίδιο με reference/css/assets/main.min.css + page-source: body.bg-rich-carbon */
+  --color-core-black: #090909;
+  --color-rich-carbon: #111111;
+  --color-urban-smoke: #1b1b1b;
+  --color-pulse-ash: #535353;
+  --color-off-white: #e7e7e7;
+  --color-neural-fog: #dadada;
+  --color-white-flash: #f5f5f5;
+  --color-electric-teal: #5c939f;
+  --color-infrared: #ed6d40;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
+@media (min-width: 64rem) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --header-height: 5rem;
   }
 }
 
+@theme inline {
+  --font-sans: var(--font-open-sans), "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: "Azeret Mono", ui-monospace, monospace;
+  /* Hero / reference HTML: Space Mono */
+  --font-hero-mono: var(--font-space-mono), ui-monospace, monospace;
+  --color-rich-carbon: #111111;
+  --color-core-black: #090909;
+  --color-urban-smoke: #1b1b1b;
+  --color-pulse-ash: #535353;
+  --color-off-white: #e7e7e7;
+  --color-neural-fog: #dadada;
+  --color-white-flash: #f5f5f5;
+  --color-electric-teal: #5c939f;
+  --color-infrared: #ed6d40;
+}
+
+html {
+  padding-right: 0 !important;
+  scrollbar-gutter: stable;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.bg-app {
+  background-color: var(--color-rich-carbon);
+}
+
+/* Hero (particle grid reference): εισόδους κειμένου */
+@keyframes hero-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes hero-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes hero-scroll-pulse {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+
+  50% {
+    opacity: 0.9;
+  }
+}
+
+.hero-animate-fade-up {
+  opacity: 0;
+  animation: hero-fade-up 1s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.hero-animate-fade-in {
+  opacity: 0;
+  animation: hero-fade-in 1s ease forwards;
+}
+
+.hero-eyebrow-animate {
+  opacity: 0;
+  animation: hero-fade-up 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.5s forwards;
+}
+
+.hero-title-animate {
+  opacity: 0;
+  animation: hero-fade-up 1s cubic-bezier(0.22, 1, 0.36, 1) 0.7s forwards;
+}
+
+.hero-sub-animate {
+  opacity: 0;
+  animation: hero-fade-up 1s cubic-bezier(0.22, 1, 0.36, 1) 1s forwards;
+}
+
+.hero-bottom-animate {
+  opacity: 0;
+  animation: hero-fade-in 1s ease 1.8s forwards;
+}
+
+.hero-scroll-line {
+  background: linear-gradient(to bottom, rgba(200, 200, 200, 0.3), transparent);
+  animation: hero-scroll-pulse 2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-eyebrow-animate,
+  .hero-title-animate,
+  .hero-sub-animate,
+  .hero-bottom-animate {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Typography όπως reference main.min.css (.p1, .p2-mono) */
+.ref-p1 {
+  font-size: 0.875rem;
+  line-height: 120%;
+}
+
+@media (min-width: 48rem) {
+  .ref-p1 {
+    font-size: 1rem;
+  }
+}
+
+.ref-p2-mono {
+  font-family: var(--font-mono);
+  font-size: 0.688rem;
+  line-height: 0.938rem;
+  text-transform: uppercase;
+}
+
+@media (min-width: 48rem) {
+  .ref-p2-mono {
+    font-size: 0.75rem;
+  }
+}
+
+/* Reference-like typography tokens used in focus section */
+.p1-mono {
+  font-family: var(--font-mono);
+  font-size: 0.688rem;
+  line-height: 0.938rem;
+  text-transform: uppercase;
+}
+
+.p1 {
+  font-size: 1rem;
+  line-height: 120%;
+}
+
+.p3 {
+  font-size: 0.8125rem;
+  line-height: 130%;
+}
+
+.h2 {
+  font-family: var(--font-sans);
+  font-size: 2.25rem;
+  line-height: 1;
+  font-weight: 500;
+}
+
+/* Portfolio / research intro (WQF #portfolio .h5) */
+.h5 {
+  font-family: var(--font-sans);
+  font-size: 1.5rem;
+  font-weight: 500;
+  line-height: 1;
+}
+
+@media (min-width: 48rem) {
+  .p1-mono {
+    font-size: 0.75rem;
+  }
+
+  .p3 {
+    font-size: 0.875rem;
+  }
+
+  .h2 {
+    font-size: 3.75rem;
+  }
+
+  .h5 {
+    font-size: 1.875rem;
+  }
+}
+
+/* Industries list (WQF #industries): .h4, .p2, fluid .h-vw, corner accents */
+.h4 {
+  font-family: var(--font-sans);
+  font-size: 1.75rem;
+  font-weight: 500;
+  line-height: 1;
+}
+
+@media (min-width: 48rem) {
+  .h4 {
+    font-size: 2.5rem;
+  }
+}
+
+.p2 {
+  font-size: 0.938rem;
+  line-height: 110%;
+}
+
+@media (min-width: 22.5rem) {
+  .min-\[360px\]\:h-vw {
+    font-size: clamp(2.25rem, 5.5vw, 4.875rem);
+    font-weight: 500;
+    line-height: 1;
+  }
+}
+
+.corner-accent {
+  position: absolute;
+}
+
+.corner-accent:first-of-type {
+  left: var(--inset, 0);
+  top: var(--inset, 0);
+}
+
+.corner-accent:nth-of-type(2) {
+  right: var(--inset, 0);
+  top: var(--inset, 0);
+  transform: rotate(90deg);
+}
+
+.corner-accent:nth-of-type(3) {
+  bottom: var(--inset, 0);
+  left: var(--inset, 0);
+  transform: rotate(270deg);
+}
+
+.corner-accent:nth-of-type(4) {
+  bottom: var(--inset, 0);
+  right: var(--inset, 0);
+  transform: rotate(180deg);
+}
+
+/*
+ * Ethos κουρτίνα: το clip-path ορίζει ΜΟΝΟ το GSAP (reference page-source: tl.from(...)).
+ * Κανένα default inset στο #ethos — αλλιώς το «τέλος» του from() είναι ήδη κλειστό (όλα μαύρα).
+ */
+@media (prefers-reduced-motion: reduce) {
+  #ethos {
+    clip-path: none;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 0.5rem;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-rich-carbon);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-neural-fog);
+  border-radius: 0.75rem;
+}
+
+/*
+ * Hero headline: μεγέθη από reference/css/assets/main.min.css — εφαρμόζονται στο Hero.tsx με Tailwind
+ * utilities (@layer), ώστε να μην κερδίζει το preflight (h1 { font-size: inherit }).
+ * - Εναλλακτικά .h2: 2.25rem → 3.75rem @48rem + leading-none
+ * - Fluid (βάση WQF h-vw): clamp στο Hero: 1.95rem / 4.75vw / 4.125rem
+ */
+
+/* Keyframes από WQF main.min.css (hero-title keyframes δεν ήταν στο paste — κλασικές εισόδους). */
+@keyframes loader {
+  0% {
+    clip-path: inset(0);
+    transform: translateY(0);
+  }
+  to {
+    clip-path: inset(0 0 100%);
+    transform: translateY(-3rem);
+  }
+}
+
+@keyframes loader-logo {
+  0% {
+    transform: scale(1.05) rotate(0);
+  }
+  to {
+    transform: scale(1) rotate(0);
+  }
+}
+
+@keyframes clip-svg {
+  0% {
+    clip-path: inset(100% 0 0);
+  }
+  to {
+    clip-path: inset(0);
+  }
+}
+
+@keyframes loader-logo-rotate {
+  0% {
+    transform: scale(1) rotate(0);
+  }
+  to {
+    transform: scale(1) rotate(-90deg);
+  }
+}
+
+@keyframes loader-logo-translate {
+  0% {
+    translate: 0;
+  }
+  50% {
+    translate: 0 -2rem;
+  }
+  to {
+    translate: 0;
+  }
+}
+
+/* Ξεκινούν προς το κέντρο, ανοίγουν στα άκρα (συμπληρωματικά με το split τίτλου) */
+@keyframes hero-title-left {
+  0% {
+    opacity: 0;
+    transform: translate3d(1.75rem, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes hero-title-right {
+  0% {
+    opacity: 0;
+    transform: translate3d(-1.75rem, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.hero-title--left,
+.hero-title--right {
+  display: inline-block;
+  will-change: transform;
+}
+
+/* Ίδιο με reference main.min.css: delay 2.75s · both = κατάσταση 0% κατά τη διάρκεια delay */
+.hero-title-left {
+  animation: hero-title-left 1.5s var(--easing) 2.75s both;
+}
+
+.hero-title-right {
+  animation: hero-title-right 1.5s var(--easing) 2.75s both;
+}
+
+/* Κάτω ζώνη hero — πλησιάζει το GSAP from(bottom) του reference (μετά τον τίτλο) */
+@keyframes hero-bottom-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hero-bottom--in {
+  opacity: 0;
+  animation: hero-bottom-in 1s cubic-bezier(0.76, 0, 0.24, 1) 3.5s both;
+}
+
+/* Intro overlay: logo clip + micro-motion (WQF .loader--logo / .loader--clip-svg) */
+.hero-intro-loader .loader--clip-svg {
+  animation: clip-svg 1.75s var(--easing) forwards;
+}
+
+.hero-intro-loader .loader--logo {
+  animation:
+    loader-logo 1s var(--easing) forwards,
+    loader-logo-rotate 0.5s var(--easing) 1.75s forwards,
+    loader-logo-translate 1s var(--easing) 1.75s forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-intro-loader .loader--clip-svg,
+  .hero-intro-loader .loader--logo,
+  .hero-title-left,
+  .hero-title-right,
+  .hero-bottom--in {
+    animation: none !important;
+  }
+
+  .hero-title-left,
+  .hero-title-right {
+    opacity: 1;
+    transform: none;
+  }
+
+  .hero-bottom--in {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.ease-wqf {
+  transition-timing-function: var(--easing);
+}
+
+/* WQF portfolio typography + CTA glitch (reference main.min.css) */
+.p2-mono {
+  font-family: var(--font-mono);
+  font-size: 0.688rem;
+  line-height: 0.938rem;
+  text-transform: uppercase;
+}
+
+@media (min-width: 48rem) {
+  .p2-mono {
+    font-size: 0.75rem;
+  }
+}
+
+.h6 {
+  font-size: 1.125rem;
+  font-weight: 500;
+  line-height: 1.1;
+}
+
+@media (min-width: 48rem) {
+  .h6 {
+    font-size: 1.375rem;
+    line-height: 1;
+  }
+
+  .md\:h7 {
+    font-size: 1.5rem;
+    font-weight: 500;
+    line-height: 1;
+  }
+}
+
+:root {
+  --animate-glitch-hover: glitch-hover 0.3s linear;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --animate-glitch-hover: none;
+  }
+}
+
+.hover\:animate-glitch-hover:hover {
+  animation: glitch-hover 0.3s linear;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hover\:animate-glitch-hover:hover {
+    animation: none;
+  }
+}
+
+/* Research / portfolio: flat neural-fog + rich-carbon (χωρίς dot overlay). */
+.research-portfolio-section {
+  background-color: var(--color-neural-fog);
+  color: var(--color-rich-carbon);
+}
+
+/* WQF .button.-arrow / .-dark (main.min.css @layer components) */
+.research-portfolio-section .research-nav-arrow {
+  display: flex;
+  width: 1.875rem;
+  height: 1.875rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.25rem;
+  touch-action: manipulation;
+  cursor: pointer;
+  background-color: var(--color-off-white);
+  color: var(--color-rich-carbon);
+  transition:
+    background-color 0.3s var(--easing),
+    color 0.3s var(--easing);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .research-portfolio-section .research-nav-arrow:not(:disabled):hover {
+    background-color: var(--color-urban-smoke);
+    color: var(--color-off-white);
+  }
+}
+
+.research-portfolio-section .research-nav-arrow:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .research-portfolio-section .research-nav-arrow {
+    transition: none;
+  }
+}
+
+/* Swiper 12: easing για translate (αλλιώς default `initial` — όχι WQF feel) */
+.research-swiper {
+  --swiper-wrapper-transition-timing-function: var(--easing);
+}
+
+/* Swiper #portfolio wrapper (reference page-source: duration-400! + items-center) */
+.research-swiper .swiper-wrapper {
+  display: flex;
+  align-items: center;
+  min-height: 89.6cqw;
+  transition-duration: 500ms;
+  transition-timing-function: var(--easing);
+}
+
+@media (min-width: 48rem) {
+  .research-swiper .swiper-wrapper {
+    min-height: 53.94cqw;
+  }
+}
+
+@media (min-width: 64rem) {
+  .research-swiper .swiper-wrapper {
+    min-height: 32.36cqw;
+  }
+}
+
+/* Reference main.min.css: .swiper .swiper-slide { cursor: none !important } + custom drag pill */
+.research-swiper.research-swiper--drag-cursor .swiper-slide {
+  cursor: none !important;
+}
+
+/* WQF #portfolio: hover on active slide (reference — ::before + descendants → --hover-*) */
+.swiper-slide-active .portfolio-card-wqf:hover {
+  color: var(--hover-logo-color);
+}
+
+.swiper-slide-active .portfolio-card-wqf:hover::before {
+  background-color: var(--hover-background-color);
+}
+
+.swiper-slide-active .portfolio-card-wqf:hover .logo-mark {
+  color: var(--hover-logo-color);
+  background-color: transparent;
+}
+
+.swiper-slide-active .portfolio-card-wqf:hover .p2-mono {
+  color: var(--hover-logo-color);
+  opacity: 0.85;
+}
+
+/* Beat theme utilities on PortfolioGlitchLink (group/button + group-data) */
+.swiper-slide-active .portfolio-card-wqf:hover [class*="group/button"] .p2-mono,
+.swiper-slide-active .portfolio-card-wqf:hover [class*="group/button"] span {
+  color: var(--hover-logo-color) !important;
+}
+
+.swiper-slide-active .portfolio-card-wqf:hover [class*="group/button"] .corner-accent {
+  color: var(--hover-logo-color) !important;
+}
+
+.swiper-slide-active .portfolio-card-wqf:hover [class*="group/button"] .button--dot {
+  background-color: var(--hover-logo-color) !important;
+}
+
+@media (max-width: 47.9375rem) {
+  .swiper-slide-active .portfolio-card-wqf {
+    color: var(--hover-logo-color);
+  }
+
+  .swiper-slide-active .portfolio-card-wqf::before {
+    background-color: var(--hover-background-color);
+  }
+
+  .swiper-slide-active .portfolio-card-wqf .logo-mark {
+    color: var(--hover-logo-color);
+    background-color: transparent;
+  }
+
+  .swiper-slide-active .portfolio-card-wqf .p2-mono {
+    color: var(--hover-logo-color);
+    opacity: 0.85;
+  }
+
+  .swiper-slide-active .portfolio-card-wqf [class*="group/button"] .p2-mono,
+  .swiper-slide-active .portfolio-card-wqf [class*="group/button"] span {
+    color: var(--hover-logo-color) !important;
+  }
+
+  .swiper-slide-active .portfolio-card-wqf [class*="group/button"] .corner-accent {
+    color: var(--hover-logo-color) !important;
+  }
+
+  .swiper-slide-active .portfolio-card-wqf [class*="group/button"] .button--dot {
+    background-color: var(--hover-logo-color) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .portfolio-card-wqf,
+  .portfolio-card-wqf::before {
+    transition-duration: 0ms !important;
+  }
+}
+
+@keyframes glitch-hover {
+  0% {
+    opacity: 1;
+  }
+
+  8% {
+    opacity: 0.7;
+  }
+
+  12% {
+    opacity: 0.2;
+  }
+
+  18% {
+    opacity: 0.9;
+  }
+
+  25% {
+    opacity: 1;
+  }
+
+  32% {
+    opacity: 0.4;
+  }
+
+  38% {
+    opacity: 0.8;
+  }
+
+  42% {
+    opacity: 0.3;
+  }
+
+  48% {
+    opacity: 1;
+  }
+
+  65% {
+    opacity: 0.85;
+  }
+
+  72% {
+    opacity: 0.15;
+  }
+
+  78% {
+    opacity: 0.6;
+  }
+
+  85% {
+    opacity: 1;
+  }
+
+  92% {
+    opacity: 0.5;
+  }
+
+  to {
+    opacity: 1;
+  }
 }

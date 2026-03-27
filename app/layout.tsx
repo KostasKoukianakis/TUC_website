@@ -1,16 +1,22 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Open_Sans, Space_Mono } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+/** Ίδια οικογένεια με το επίσημο tuc.gr (OpenSansRegular / OpenSansLight → Open Sans). */
+const openSans = Open_Sans({
+  subsets: ["latin", "greek"],
+  weight: ["300", "400", "500", "600", "700"],
+  display: "swap",
+  variable: "--font-open-sans",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+/** Hero reference: Space Mono για nav + mono labels. */
+const spaceMono = Space_Mono({
   subsets: ["latin"],
+  weight: ["400", "700"],
+  display: "swap",
+  variable: "--font-space-mono",
 });
 
 export const metadata: Metadata = {
@@ -34,52 +40,51 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${openSans.variable} ${spaceMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full bg-slate-950 text-slate-50">
+      <body className="bg-app min-h-full font-sans text-off-white">
         <div className="flex min-h-screen flex-col">
-          <header className="sticky top-0 z-40 border-b border-slate-800 bg-slate-950/80 backdrop-blur">
-            <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 md:px-6">
-              <Link href="/" className="flex items-center gap-2">
-                <div className="flex h-9 w-9 items-center justify-center rounded-md bg-blue-600/90 text-white shadow-md shadow-blue-500/40">
-                  <span className="text-lg font-semibold tracking-tight">
-                    DL
+          {/*
+            Padding όπως reference view-source (header > .flex.lg:container + εσωτερική μπάρα):
+            container: mx-auto max-w-[160rem] px-[0.625rem] lg:px-10 (2.5rem @64rem)
+            μπάρα: px-[10px] lg:px-0 · gap-[20px] · ύψος --header-height
+            κάθε nav link: h-[40px] px-[20px] (WQF li > a)
+          */}
+          <header className="fixed left-0 right-0 top-0 z-40 bg-transparent lg:h-[var(--header-height)] lg:overflow-hidden">
+            <div className="mx-auto flex w-full max-w-[160rem] px-[0.625rem] lg:px-10">
+              <div className="relative isolate mx-auto flex h-[var(--header-height)] w-full grow items-center justify-between gap-[20px] px-[10px] lg:px-0">
+                <Link
+                  href="/"
+                  className="font-hero-mono flex shrink-0 flex-col leading-snug"
+                >
+                  <span className="text-[0.62rem] uppercase leading-relaxed tracking-[0.14em] text-[rgba(220,220,220,0.85)]">
+                    Digital Image &amp;
+                    <br />
+                    Signal Processing Lab
                   </span>
-                </div>
-                <div className="flex flex-col leading-tight">
-                  <span className="text-sm font-semibold tracking-wide text-slate-50">
-                    DISPLAY Lab
-                  </span>
-                  <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-400">
-                    Technical University of Crete
-                  </span>
-                </div>
-              </Link>
+                </Link>
 
-              <nav className="hidden items-center gap-6 text-sm font-medium text-slate-200 md:flex">
-                {navItems.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className="transition-colors hover:text-blue-400"
-                  >
-                    {item.label}
-                  </Link>
-                ))}
-              </nav>
+                <nav className="hidden items-center gap-10 lg:flex">
+                  {navItems.map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className="font-hero-mono flex h-[40px] items-center text-[0.58rem] uppercase leading-[0.938rem] tracking-[0.16em] text-[rgba(200,200,200,0.45)] transition-colors duration-200 hover:text-[rgba(200,200,200,0.9)]"
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </nav>
+              </div>
             </div>
           </header>
 
-          <main className="flex-1">
-            <div className="mx-auto w-full max-w-6xl px-4 py-10 md:px-6 md:py-16">
-              {children}
-            </div>
-          </main>
+          <main className="flex-1">{children}</main>
 
-          <footer className="border-t border-slate-800 bg-slate-950/95">
-            <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-6 text-xs text-slate-400 md:flex-row md:items-center md:justify-between md:px-6">
+          <footer className="border-t border-off-white/10 bg-transparent">
+            <div className="flex w-full flex-col gap-4 px-[var(--page-gutter-x)] py-6 text-xs text-off-white/60 md:flex-row md:items-center md:justify-between">
               <div>
-                <div className="font-semibold text-slate-200">
+                <div className="font-semibold text-off-white">
                   DISPLAY Lab – Digital Image and Signal Processing
                 </div>
                 <div>
@@ -91,7 +96,7 @@ export default function RootLayout({
                 <span>
                   © {new Date().getFullYear()} Technical University of Crete.
                 </span>
-                <span className="hidden md:inline text-slate-600">•</span>
+                <span className="hidden md:inline text-pulse-ash">•</span>
                 <span>Chania, Greece</span>
               </div>
             </div>
