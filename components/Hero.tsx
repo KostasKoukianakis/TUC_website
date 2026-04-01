@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { HeroContactButton } from "@/components/HeroContactButton";
 import { HeroIntroLoader } from "@/components/HeroIntroLoader";
+import { HeroTeamMeet } from "@/components/HeroTeamMeet";
 
 const HeroScene = dynamic(
   () => import("@/components/HeroScene").then((m) => m.HeroScene),
@@ -12,17 +13,10 @@ const HeroScene = dynamic(
     ssr: false,
     loading: () => (
       <div
-        className="pointer-events-none absolute inset-0 z-0 min-h-[100dvh] w-full bg-app"
+        className="pointer-events-none absolute inset-0 z-0 min-h-[100dvh] w-full bg-black"
         aria-hidden
       />
     ),
-  },
-);
-
-const HeroLabDotScene = dynamic(
-  () => import("@/components/HeroLabDotScene").then((m) => m.HeroLabDotScene),
-  {
-    ssr: false,
   },
 );
 
@@ -135,23 +129,75 @@ export function Hero() {
 
   const seg = (start: number, end: number) =>
     Math.min(Math.max((progress - start) / (end - start), 0), 1);
-  // Local hero timeline (0..1): show ethos around 12-15% of hero scroll.
+  const smoothstep01 = (t: number) => {
+    const x = Math.min(Math.max(t, 0), 1);
+    return x * x * (3 - 2 * x);
+  };
+  // Local hero timeline (0..1): tune ethos to appear earlier and linger longer.
   const heroFade = 1 - seg(0.18, 0.26);
-  const ethosIn = seg(0.24, 0.32);
-  const ethosOut = 1 - seg(0.5, 0.68);
-  const researchOpacity = ethosIn * ethosOut;
+
+  // Ethos: copy first, cards second (so the text doesn't "arrive late" and instantly fade).
+  const ethosTextIn = seg(0.06, 0.14);
+  const ethosTextOut = 1 - seg(0.72, 0.86);
+  const ethosTextOpacity = ethosTextIn * ethosTextOut;
+
+  const ethosCardsIn = seg(0.18, 0.28);
+  // Fade cards out once they have reached the top area.
+  const ethosCardsOut = 1 - seg(0.5, 0.66);
+  // Make fade-out steeper for a more pronounced disappearance.
+  const ethosCardsOpacity = ethosCardsIn * Math.pow(ethosCardsOut, 1.8);
+
+  // Keep old name for downstream transforms that assume an ethos-based parallax.
+  const ethosIn = ethosTextIn;
   // Keep parallel narrative to two sections (title -> ethos) for now.
   const pubsIn = 0;
   const zoomT = seg(0.5, 0.92);
-  /** Wave-field WebGL: fades out; lab picks up exactly at end (no dead scroll gap). */
-  const hero3dOpacity = 1 - seg(0.4, 0.54);
-  /** Lab: same scroll range as before but starts when wave is gone (no CSS double-fade on canvas). */
-  const labReveal = seg(0.54, 0.88);
-  const showLab = labReveal > 0.02;
-  const showHeroScene = hero3dOpacity > 0.02;
-  const bloom = Math.max(0, (zoomT - 0.7) / 0.3);
-  const focusGlow = Math.max(0, (zoomT - 0.74) / 0.26);
-  const studioLightFade = 1 - seg(0.0, 0.14);
+  /** Lab dot populate + fly path (same canvas as hero wave — see `HeroScene`). */
+  const labHandoffStart = 0.7;
+  const labHandoffEnd = 0.9;
+  const labReveal = seg(labHandoffStart, labHandoffEnd);
+  /** Any lab fly / populate: kill CSS overlays — bloom uses `--color-neural-fog` (#dadada) and reads as a grey wash. */
+  const labSceneActive = labReveal > 0.035;
+  const overlaySuppress = 1 - seg(0.76, 0.94);
+  const bloom = labSceneActive
+    ? 0
+    : Math.max(0, (zoomT - 0.7) / 0.3) * overlaySuppress;
+  const focusGlow = labSceneActive
+    ? 0
+    : Math.max(0, (zoomT - 0.74) / 0.26) * overlaySuppress;
+  const studioLightFade = labSceneActive
+    ? 0
+    : (1 - seg(0.0, 0.14)) * (1 - labReveal * 0.92);
+  /** Top/bottom `from-app` vignettes lift black level over the canvas; hide during lab. */
+  const heroVignetteOpacity = labSceneActive ? 0 : 1;
+  /** Cinematic left title: short beat, then clears for center copy. */
+  const labTeamTitleIn = seg(0.58, 0.66);
+  const labTeamTitleOut = 1 - seg(0.64, 0.74);
+  const labTeamTitleOpacity = labTeamTitleIn * labTeamTitleOut;
+  const labTeamTitleLift = (1 - labTeamTitleIn) * 22;
+  /** Centered documentary serif: two beats — rise + blur in, then out. */
+  const labNarrative1InT = seg(0.695, 0.762);
+  const labNarrative1Out = 1 - seg(0.772, 0.828);
+  const labNarrative1Appear = smoothstep01(labNarrative1InT);
+  const labNarrative1Vanish = smoothstep01(1 - labNarrative1Out);
+  const labNarrative1Opacity = labNarrative1Appear * labNarrative1Out;
+  const labNarrative1Rise =
+    (1 - labNarrative1Appear) * 32 - labNarrative1Vanish * 32;
+  const labNarrative1Blur =
+    (1 - labNarrative1Appear) * 11 + labNarrative1Vanish * 11;
+  const labNarrative2InT = seg(0.812, 0.888);
+  const labNarrative2Out = 1 - seg(0.9, 0.97);
+  const labNarrative2Appear = smoothstep01(labNarrative2InT);
+  const labNarrative2Vanish = smoothstep01(1 - labNarrative2Out);
+  const labNarrative2Opacity = labNarrative2Appear * labNarrative2Out;
+  const labNarrative2Rise =
+    (1 - labNarrative2Appear) * 32 - labNarrative2Vanish * 32;
+  const labNarrative2Blur =
+    (1 - labNarrative2Appear) * 11 + labNarrative2Vanish * 11;
+  const labNarrativeAny =
+    labNarrative1Opacity > 0.04 || labNarrative2Opacity > 0.04;
+  /** Meet-the-team strip + modal: fades in as the last narrative line exits. */
+  const labTeamMeetReveal = smoothstep01(seg(0.904, 0.968));
   const rightParallax = ((1 - ethosIn) * 20).toFixed(1);
   const leftParallax = ((1 - ethosIn) * 14).toFixed(1);
 
@@ -161,24 +207,19 @@ export function Hero() {
 
       <section
         ref={rootRef}
-        className="relative box-border min-h-[400dvh] overflow-clip bg-app text-off-white"
+        className="relative box-border min-h-[480dvh] overflow-clip bg-black text-off-white"
         aria-label="Introduction"
       >
-        <div className="pointer-events-none fixed left-0 top-1/2 z-[70] -translate-y-1/2">
+        <div className="hero-scroll-meter pointer-events-none fixed left-0 top-1/2 z-[70] -translate-y-1/2 transition-opacity duration-200">
           <div className="font-hero-mono rounded-r-md border border-l-0 border-white/20 bg-black/45 px-2 py-1 text-[0.58rem] uppercase tracking-[0.16em] text-white/80 backdrop-blur-sm md:px-2.5">
             {pageScrollPercent.toFixed(2)}%
           </div>
         </div>
 
         <div className="sticky top-0 h-[100dvh] overflow-hidden pt-[var(--header-height)]">
-          {showHeroScene && (
-            <div
-              className="pointer-events-none absolute inset-0 z-0 transition-opacity duration-[480ms] ease-out"
-              style={{ opacity: hero3dOpacity }}
-            >
-              <HeroScene scrollProgress={progress} />
-            </div>
-          )}
+          <div className="pointer-events-none absolute inset-0 z-0">
+            <HeroScene scrollProgress={progress} labReveal={labReveal} />
+          </div>
 
           <div
             className="pointer-events-none absolute inset-0 z-[8] transition-opacity duration-300"
@@ -199,9 +240,6 @@ export function Hero() {
             }}
             aria-hidden
           />
-          {showLab && (
-            <HeroLabDotScene progress={labReveal} opacity={labReveal} />
-          )}
           <div
             className="pointer-events-none absolute inset-0 z-[10] transition-opacity duration-300"
             style={{
@@ -222,11 +260,80 @@ export function Hero() {
           </div>
 
           <div
-            className="pointer-events-none absolute left-0 right-0 top-0 z-[4] h-[22%] bg-gradient-to-b from-app to-transparent"
+            className="pointer-events-none absolute inset-y-0 left-0 z-[15] flex w-[min(100%,400px)] flex-col justify-center pl-[clamp(1rem,4.5vw,2.75rem)] pr-3 sm:w-[min(100%,440px)] sm:pr-6 md:w-[min(100%,480px)]"
+            style={{
+              opacity: labTeamTitleOpacity,
+              transform: `translate3d(0, ${labTeamTitleLift}px, 0)`,
+            }}
+            aria-hidden={labTeamTitleOpacity < 0.04}
+          >
+            <div className="hero-lab-team-scan relative">
+              <h2 className="font-sans hero-lab-team-breathe text-[clamp(1.65rem,5.8vw,3.15rem)] font-semibold uppercase leading-[0.97] tracking-[0.12em] text-[#e8ecf0] [text-shadow:0_0_48px_rgba(130,170,210,0.2),0_2px_0_rgba(0,0,0,0.88),0_0_1px_rgba(255,255,255,0.32)] sm:tracking-[0.15em] md:text-[clamp(2rem,4.2vw,3.25rem)] md:tracking-[0.18em]">
+                The
+                <br />
+                Lab
+                <br />
+                Team
+              </h2>
+              <p className="font-hero-mono mt-3 max-w-[19rem] text-[0.56rem] uppercase leading-relaxed tracking-[0.18em] text-[rgba(155,185,210,0.62)] sm:mt-4 sm:text-[0.6rem] sm:tracking-[0.19em] md:text-[0.64rem] md:tracking-[0.18em]">
+                Office 141.A33 · 1st floor · Science Building · University Campus,
+                TUC
+              </p>
+            </div>
+          </div>
+
+          <div
+            className="pointer-events-none absolute inset-0 z-[16] flex items-center justify-center px-[clamp(1.25rem,6vw,2.5rem)]"
+            aria-hidden={!labNarrativeAny}
+          >
+            <div className="relative mx-auto min-h-[5.5rem] w-full max-w-[min(42rem,94vw)]">
+              <p
+                className="font-hero-serif absolute inset-x-0 top-1/2 mx-auto max-w-[min(42rem,94vw)] text-center text-[clamp(1.2rem,2.85vw,1.72rem)] font-normal leading-[1.48] tracking-[0.012em] text-white sm:leading-[1.52]"
+                style={{
+                  opacity: labNarrative1Opacity,
+                  transform: `translate3d(0, calc(-50% + ${labNarrative1Rise}px), 0)`,
+                  filter:
+                    labNarrative1Blur > 0.2
+                      ? `blur(${labNarrative1Blur.toFixed(2)}px)`
+                      : "none",
+                  textShadow:
+                    "0 0 2px rgba(0,0,0,1), 0 1px 3px rgba(0,0,0,1), 0 3px 16px rgba(0,0,0,0.92), 0 8px 36px rgba(0,0,0,0.65), 0 0 48px rgba(0,0,0,0.45)",
+                }}
+              >
+                We follow the signal through noise and artifact—
+                <br />
+                from raw measurement to understanding we can defend.
+              </p>
+              <p
+                className="font-hero-serif absolute inset-x-0 top-1/2 mx-auto max-w-[min(42rem,94vw)] text-center text-[clamp(1.2rem,2.85vw,1.72rem)] font-normal leading-[1.48] tracking-[0.012em] text-white sm:leading-[1.52]"
+                style={{
+                  opacity: labNarrative2Opacity,
+                  transform: `translate3d(0, calc(-50% + ${labNarrative2Rise}px), 0)`,
+                  filter:
+                    labNarrative2Blur > 0.2
+                      ? `blur(${labNarrative2Blur.toFixed(2)}px)`
+                      : "none",
+                  textShadow:
+                    "0 0 2px rgba(0,0,0,1), 0 1px 3px rgba(0,0,0,1), 0 3px 16px rgba(0,0,0,0.92), 0 8px 36px rgba(0,0,0,0.65), 0 0 48px rgba(0,0,0,0.45)",
+                }}
+              >
+                Models, spectra, and code—tools we sharpen until they hold
+                <br />
+                when the world pushes back with noise and doubt.
+              </p>
+            </div>
+          </div>
+
+          <HeroTeamMeet reveal={labTeamMeetReveal} />
+
+          <div
+            className="pointer-events-none absolute left-0 right-0 top-0 z-[4] h-[22%] bg-gradient-to-b from-black to-transparent"
+            style={{ opacity: heroVignetteOpacity }}
             aria-hidden
           />
           <div
-            className="pointer-events-none absolute bottom-0 left-0 right-0 z-[4] h-[35%] bg-gradient-to-t from-app to-transparent"
+            className="pointer-events-none absolute bottom-0 left-0 right-0 z-[4] h-[35%] bg-gradient-to-t from-black to-transparent"
+            style={{ opacity: heroVignetteOpacity }}
             aria-hidden
           />
 
@@ -259,7 +366,11 @@ export function Hero() {
           <section className="pointer-events-none flex h-[100dvh] items-start justify-center p-[20%] pt-[12vh] md:pt-[10vh]">
             <div
               className="relative flex w-full max-w-4xl flex-col items-center text-center"
-              style={{ opacity: heroFade * (1 - researchOpacity) }}
+              style={{
+                opacity:
+                  heroFade *
+                  (1 - Math.max(ethosTextOpacity, ethosCardsOpacity)),
+              }}
             >
               <div
                 className="pointer-events-none absolute inset-x-0 top-[14vh] z-[1] mx-auto h-[38vh] w-[min(92vw,980px)] rounded-full bg-[radial-gradient(circle_at_center,rgba(0,0,0,0.46)_0%,rgba(0,0,0,0.26)_42%,rgba(0,0,0,0)_72%)] blur-2xl"
@@ -282,7 +393,7 @@ export function Hero() {
 
           <section
             className="pointer-events-auto flex h-[100dvh] items-end justify-center"
-            style={{ opacity: researchOpacity }}
+            style={{ opacity: Math.max(ethosTextOpacity, ethosCardsOpacity) }}
           >
             <div className="absolute left-[8vw] right-[8vw] top-[var(--header-height)] h-px bg-white/5" />
             <div className="mx-auto w-full max-w-[160rem] px-[0.625rem] lg:px-10">
@@ -290,7 +401,10 @@ export function Hero() {
                 className="w-full transition-transform duration-200"
                 style={{ transform: `translateY(${leftParallax}px)` }}
               >
-              <div className="mb-10 grid grid-cols-1 gap-x-6 gap-y-6 md:mb-[60px] md:grid-cols-2 md:gap-x-6">
+              <div
+                className="mb-10 grid grid-cols-1 gap-x-6 gap-y-6 md:mb-[60px] md:grid-cols-2 md:gap-x-6"
+                style={{ opacity: ethosTextOpacity }}
+              >
                 <div className="flex flex-col gap-3">
                   <h3 className="font-mono text-[0.688rem] uppercase leading-[0.938rem] md:text-[0.75rem]">
                     Laboratory ethos
@@ -301,8 +415,12 @@ export function Hero() {
                     Systems with purpose.
                   </p>
                 </div>
-                <div className="flex flex-col items-start">
-                  <p className="ref-p1 border-rich-carbon/20 mb-6 border-t border-rich-carbon/20 pt-5 md:mb-8">
+                <div className="relative flex flex-col items-start rounded-2xl border border-white/10 bg-black/35 px-4 py-4 backdrop-blur-[3px] md:px-5 md:py-5">
+                  <div
+                    className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-b from-black/35 via-black/18 to-black/28"
+                    aria-hidden
+                  />
+                  <p className="ref-p1 border-rich-carbon/30 relative z-[1] mb-6 border-t pt-5 text-white/95 [text-shadow:0_1px_2px_rgba(0,0,0,0.7)] md:mb-8">
                     The{" "}
                     <strong className="font-medium">
                       Digital Image and Signal Processing Laboratory (DISPLAY
@@ -316,31 +434,34 @@ export function Hero() {
                     same mission space described on the official lab site,
                     expressed for this new front-end.
                   </p>
-                  <p className="ref-p1 mb-6 text-white/90">
+                  <p className="ref-p1 relative z-[1] mb-6 text-white/92 [text-shadow:0_1px_2px_rgba(0,0,0,0.65)]">
                     Research spans biomedical imaging, machine vision, video
                     analysis and compression, archive search, and intelligent
                     modelling-so ideas move from equations to experiments and,
                     when it fits, to deployment.
                   </p>
-                  <p className="ref-p2-mono mb-6 text-white/75">
+                  <p className="ref-p2-mono relative z-[1] mb-6 text-white/85 [text-shadow:0_1px_2px_rgba(0,0,0,0.7)]">
                     School of Electrical and Computer Engineering, TUC ·
                     Division of Telecommunications ·{" "}
                     <a
                       href="https://www.display.tuc.gr/en/home"
-                      className="underline decoration-white/35 underline-offset-[3px] transition-colors hover:text-white hover:decoration-white/75"
+                      className="underline decoration-white/45 underline-offset-[3px] transition-colors hover:text-white hover:decoration-white/85"
                       target="_blank"
                       rel="noopener noreferrer"
                     >
                       display.tuc.gr
                     </a>
                   </p>
-                  <span className="font-hero-mono inline-block border border-white/45 px-7 py-2.5 text-[0.62rem] uppercase tracking-[0.14em] text-white">
+                  <span className="font-hero-mono relative z-[1] inline-block border border-white/65 bg-black/30 px-7 py-2.5 text-[0.62rem] uppercase tracking-[0.14em] text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.75)]">
                     Join us
                   </span>
                 </div>
               </div>
 
-              <ul className="group flex flex-col gap-5 md:flex-row md:gap-0">
+              <ul
+                className="group flex flex-col gap-5 md:flex-row md:gap-0"
+                style={{ opacity: ethosCardsOpacity }}
+              >
                 {ETHOS_CARDS.map((card, index) => {
                   const isActive = activeCard === index;
                   return (
@@ -350,25 +471,25 @@ export function Hero() {
                       onMouseEnter={() => setActiveCard(index)}
                       onMouseLeave={() => setActiveCard(null)}
                     >
-                      <div className="relative h-full min-h-[260px] w-full overflow-hidden rounded-[20px] transition-all delay-100 duration-500 ease-[var(--easing)] md:min-h-[320px] md:w-[125%] md:group-[.-active]/card:w-full">
+                      <div className="relative h-[360px] w-full overflow-hidden rounded-[20px] transition-all delay-100 duration-500 ease-[var(--easing)] md:h-[420px] lg:h-[480px] md:w-[125%] md:group-[.-active]/card:w-full">
                         <div
-                          className={`flex h-full min-h-[260px] w-full flex-col items-center justify-between gap-6 px-5 py-10 text-center md:min-h-[320px] md:py-[40px] ${card.cardClass}`}
+                          className={`flex h-full w-full flex-col items-center justify-between gap-3 px-5 py-5 text-center md:py-6 lg:py-8 ${card.cardClass}`}
                         >
-                          <h4 className="font-sans text-xl font-medium uppercase leading-none md:max-w-[290px] md:text-2xl lg:text-[1.625rem]">
+                          <h4 className="font-sans text-lg font-medium uppercase leading-none md:max-w-[290px] md:text-xl lg:text-2xl">
                             {card.title}
                           </h4>
-                          <div className="relative w-full max-w-[240px] md:max-w-[280px]">
+                          <div className="relative h-[110px] w-full max-w-[210px] md:h-[130px] md:max-w-[230px] lg:h-[200px] lg:max-w-[300px]">
                             <Image
                               src={card.image}
                               alt={card.imageAlt}
                               width={800}
                               height={1000}
-                              className="h-auto w-full object-contain"
+                              className="h-full w-full object-contain"
                             />
                           </div>
-                          <div className="flex w-full max-w-[260px] flex-col gap-[15px] font-mono text-[0.688rem] uppercase leading-[0.938rem] md:max-w-[280px] md:text-[0.75rem]">
+                          <div className="flex w-full max-w-[260px] flex-col gap-3 font-mono text-[0.688rem] uppercase leading-[0.938rem] md:max-w-[280px] md:text-[0.75rem]">
                             <p>{card.n}</p>
-                            <p className="h-[4.8em] overflow-hidden text-[0.8125rem] normal-case leading-relaxed opacity-90 md:text-[0.875rem]">
+                            <p className="text-[0.78rem] normal-case leading-relaxed opacity-90 md:text-[0.85rem]">
                               {card.body}
                             </p>
                           </div>

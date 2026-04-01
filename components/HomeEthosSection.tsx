@@ -118,7 +118,7 @@ export function HomeEthosSection() {
   }, []);
 
   return (
-    <div className="bg-app">
+    <div className="bg-black">
       <section
         ref={sectionRef}
         className="relative z-[1] bg-neural-fog text-rich-carbon overflow-hidden rounded-t-[20px] pt-[120px] pb-[200px] will-change-[clip-path] md:py-[220px]"
@@ -194,16 +194,16 @@ export function HomeEthosSection() {
                 onMouseLeave={() => setActiveCard(null)}
               >
                 <div
-                  className={`relative h-full min-h-[260px] w-full overflow-hidden rounded-[20px] transition-all delay-100 duration-500 ease-[var(--easing)] md:min-h-[320px] md:w-[125%] md:group-[.-active]/card:w-full`}
+                  className={`relative h-full min-h-[220px] w-full overflow-hidden rounded-[20px] transition-all delay-100 duration-500 ease-[var(--easing)] md:min-h-[260px] md:w-[125%] md:group-[.-active]/card:w-full`}
                 >
                   <div
-                    className={`flex h-full min-h-[260px] w-full flex-col items-center justify-between gap-6 px-5 py-10 text-center md:min-h-[320px] md:py-[40px] ${item.cardClass}`}
+                    className={`flex h-full min-h-[220px] w-full flex-col items-center justify-between gap-5 px-5 py-7 text-center md:min-h-[260px] md:py-7 ${item.cardClass}`}
                   >
                     <h3 className="font-sans text-xl font-medium uppercase leading-none md:max-w-[290px] md:text-2xl lg:text-[1.625rem]">
                       {item.title}
                     </h3>
                     {index === 0 && (
-                      <div className="relative w-full max-w-[240px] md:max-w-[280px]">
+                      <div className="relative w-full max-w-[220px] md:max-w-[240px]">
                         <Image
                           src="/images/image_vision.webp"
                           alt="Imaging and vision dot illustration"
@@ -215,7 +215,7 @@ export function HomeEthosSection() {
                       </div>
                     )}
                     {index === 1 && (
-                      <div className="relative w-full max-w-[240px] md:max-w-[280px]">
+                      <div className="relative w-full max-w-[220px] md:max-w-[240px]">
                         <Image
                           src="/images/signal_health.webp"
                           alt="Signals and health dot illustration"
@@ -226,7 +226,7 @@ export function HomeEthosSection() {
                       </div>
                     )}
                     {index === 2 && (
-                      <div className="relative w-full max-w-[240px] md:max-w-[280px]">
+                      <div className="relative w-full max-w-[220px] md:max-w-[240px]">
                         <Image
                           src="/images/learning_models.webp"
                           alt="Learning and models dot illustration"
@@ -237,7 +237,7 @@ export function HomeEthosSection() {
                       </div>
                     )}
                     {index === 3 && (
-                      <div className="relative w-full max-w-[240px] md:max-w-[280px]">
+                      <div className="relative w-full max-w-[220px] md:max-w-[240px]">
                         <Image
                           src="/images/education_impact.webp"
                           alt="Education and impact dot illustration"
@@ -249,7 +249,7 @@ export function HomeEthosSection() {
                     )}
                     <div className="flex w-full max-w-[260px] flex-col gap-[15px] font-mono text-[0.688rem] uppercase leading-[0.938rem] md:max-w-[280px] md:text-[0.75rem]">
                       <p>{item.n} / 04</p>
-                      <p className="h-[4.8em] overflow-hidden text-[0.8125rem] normal-case leading-relaxed opacity-90 md:text-[0.875rem]">
+                      <p className="h-[4.2em] overflow-hidden text-[0.8125rem] normal-case leading-relaxed opacity-90 md:text-[0.875rem]">
                         {item.body}
                       </p>
                     </div>

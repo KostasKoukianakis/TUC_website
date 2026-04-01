@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Open_Sans, Space_Mono } from "next/font/google";
+import { Crimson_Text, Open_Sans, Space_Mono } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
 
@@ -17,6 +17,14 @@ const spaceMono = Space_Mono({
   weight: ["400", "700"],
   display: "swap",
   variable: "--font-space-mono",
+});
+
+/** Hero lab interlude: documentary-style centered serif (reference title cards). */
+const heroSerif = Crimson_Text({
+  subsets: ["latin"],
+  weight: ["400", "600"],
+  display: "swap",
+  variable: "--font-hero-serif",
 });
 
 export const metadata: Metadata = {
@@ -40,7 +48,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${openSans.variable} ${spaceMono.variable} h-full antialiased`}
+      className={`${openSans.variable} ${spaceMono.variable} ${heroSerif.variable} h-full antialiased`}
     >
       <body className="bg-app min-h-full font-sans text-off-white">
         <div className="flex min-h-screen flex-col">

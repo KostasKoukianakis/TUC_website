@@ -78,6 +78,21 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Full-screen team modal: hide fixed header + hero scroll % so they don’t sit above the glass layer */
+html[data-team-modal-open="true"] header {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 0.2s ease,
+    visibility 0.2s ease;
+}
+
+html[data-team-modal-open="true"] .hero-scroll-meter {
+  opacity: 0;
+  visibility: hidden;
+}
+
 .bg-app {
   background-color: var(--color-rich-carbon);
 }
@@ -151,7 +166,85 @@ body {
   animation: hero-scroll-pulse 2s ease-in-out infinite;
 }
 
+/* Cinematic left-rail title (lab assemble / handoff) */
+@keyframes hero-lab-team-breathe {
+  0%,
+  100% {
+    opacity: 1;
+    filter: brightness(1);
+  }
+
+  45% {
+    opacity: 0.9;
+    filter: brightness(1.06);
+  }
+}
+
+@keyframes hero-lab-team-scan {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+
+  8% {
+    opacity: 0.12;
+  }
+
+  100% {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+}
+
+.hero-lab-team-breathe {
+  animation: hero-lab-team-breathe 3.8s ease-in-out infinite;
+}
+
+.hero-lab-team-scan::before {
+  content: "";
+  position: absolute;
+  left: -0.35rem;
+  top: 0;
+  width: 2px;
+  height: 22%;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(200, 220, 240, 0.45),
+    transparent
+  );
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.hero-lab-team-scan::after {
+  content: "";
+  position: absolute;
+  inset: -12% -8% auto -8%;
+  height: 28%;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.04),
+    transparent
+  );
+  animation: hero-lab-team-scan 5.5s linear infinite;
+  pointer-events: none;
+}
+
+.font-hero-serif {
+  font-family: var(--font-hero-serif), Georgia, "Times New Roman", Times, serif;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .hero-lab-team-breathe,
+  .hero-lab-team-scan::after {
+    animation: none;
+  }
+
+  .hero-lab-team-scan::after {
+    opacity: 0;
+  }
+
   .hero-eyebrow-animate,
   .hero-title-animate,
   .hero-sub-animate,
