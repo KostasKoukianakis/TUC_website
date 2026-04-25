@@ -71,6 +71,7 @@
 html {
   padding-right: 0 !important;
   scrollbar-gutter: stable;
+  scroll-behavior: smooth;
 }
 
 body {
@@ -556,6 +557,15 @@ html[data-team-modal-open="true"] .hero-scroll-meter {
 
 .ease-wqf {
   transition-timing-function: var(--easing);
+}
+
+body.display-intro-active header {
+  opacity: 0;
+  pointer-events: none;
+}
+
+body header {
+  transition: opacity 1600ms var(--easing);
 }
 
 /* WQF portfolio typography + CTA glitch (reference main.min.css) */

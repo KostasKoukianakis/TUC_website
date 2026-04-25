@@ -1,7 +1,6 @@
 "use client";
 
-import { WqfLogoMark } from "@/components/WqfLogoMark";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /** Ίδιο cubic-bezier easing με το page-source του WQF (x-init progress) */
 function easing(timeProgress: number): number {
@@ -31,64 +30,84 @@ function easing(timeProgress: number): number {
 
 type Props = {
   onComplete: () => void;
+  onProgress?: (progress: number) => void;
 };
 
-export function HeroIntroLoader({ onComplete }: Props) {
-  const [progress, setProgress] = useState(0);
+const INTRO_DURATION_MS = 5200;
+const EXIT_DURATION_MS = 520;
+
+export function HeroIntroLoader({ onComplete, onProgress }: Props) {
+  const progressRef = useRef<HTMLSpanElement>(null);
   const [phase, setPhase] = useState<"loading" | "exit" | "done">("loading");
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
-    const duration = 1400;
-    const startTime = Date.now();
+    document.body.classList.add("display-intro-active");
+    const prefersReducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    const duration = prefersReducedMotion ? 900 : INTRO_DURATION_MS;
+    const startTime = performance.now();
     let raf = 0;
+    let exitTimer = 0;
+    let completeTimer = 0;
 
     const tick = () => {
-      const elapsed = Date.now() - startTime;
+      const now = performance.now();
+      const elapsed = now - startTime;
       const timeProgress = Math.min(elapsed / duration, 1);
-      setProgress(Math.round(easing(timeProgress) * 100));
+      const sceneProgress = timeProgress;
+      const percent = Math.round(easing(timeProgress) * 100);
+      onProgress?.(sceneProgress);
+
+      if (progressRef.current) {
+        progressRef.current.textContent = `${percent}%`;
+      }
 
       if (timeProgress < 1) {
         raf = requestAnimationFrame(tick);
       } else {
         document.body.style.overflow = "";
-        requestAnimationFrame(() => {
+        document.body.classList.remove("display-intro-active");
+        exitTimer = window.setTimeout(() => {
           requestAnimationFrame(() => {
             window.dispatchEvent(new CustomEvent("display:intro-complete"));
           });
-        });
+        }, 60);
         setPhase("exit");
-        window.setTimeout(() => {
+        completeTimer = window.setTimeout(() => {
           setPhase("done");
           onComplete();
-        }, 450);
+        }, EXIT_DURATION_MS);
       }
     };
 
     raf = requestAnimationFrame(tick);
     return () => {
       cancelAnimationFrame(raf);
+      window.clearTimeout(exitTimer);
+      window.clearTimeout(completeTimer);
       document.body.style.overflow = "";
+      document.body.classList.remove("display-intro-active");
     };
-  }, [onComplete]);
+  }, [onComplete, onProgress]);
 
   if (phase === "done") return null;
 
   return (
     <div
-      className={`hero-intro-loader fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#0c0c0d] transition-opacity duration-[450ms] ease-wqf ${
+      className={`pointer-events-none fixed inset-0 z-[100] overflow-hidden bg-black/35 transition-opacity duration-[520ms] ease-wqf ${
         phase === "exit" ? "pointer-events-none opacity-0" : "opacity-100"
       }`}
       aria-busy={phase === "loading"}
       aria-label="Loading"
     >
-      <div className="relative isolate flex w-[120px] items-center justify-center md:w-[200px]">
-        <div className="loader--clip-svg inline-flex overflow-hidden">
-          <WqfLogoMark className="loader--logo h-14 w-14 text-off-white md:h-[4.5rem] md:w-[4.5rem]" />
-        </div>
-      </div>
-      <span className="font-mono absolute bottom-[30px] left-1/2 -translate-x-1/2 text-xs uppercase tracking-widest text-off-white/60 md:text-sm">
-        {progress}%
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_42%_at_50%_50%,rgba(80,115,135,0.06),rgba(0,0,0,0.12)_58%,rgba(0,0,0,0.38)_100%)]" />
+      <span
+        ref={progressRef}
+        className="font-hero-mono absolute bottom-[30px] left-1/2 -translate-x-1/2 text-xs uppercase tracking-widest text-off-white/60 md:text-sm"
+      >
+        0%
       </span>
     </div>
   );

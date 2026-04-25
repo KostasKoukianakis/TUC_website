@@ -38,6 +38,10 @@ const LAB_FLY_PATH = [
   { p: [0, 1.62, -5.5], l: [0, 1.9, -9] },
 ] as const;
 
+function hash01(n: number) {
+  return (Math.sin(n * 12.9898) * 43758.5453) % 1;
+}
+
 function eio(t: number) {
   return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
 }
@@ -140,14 +144,19 @@ function fillLabShellTargets(out: Float32Array, n: number) {
 
 const waveVertexShader = /* glsl */ `
   attribute float aSize;
+  attribute vec3 aIntroPos;
+  attribute float aIntroDelay;
+  attribute float aIntroPhase;
   attribute vec3 aTargetPos;
   uniform float uTime;
   uniform float uScroll;
+  uniform float uIntroAssemble;
   uniform float uAssemble;
   uniform float uLabReveal;
   uniform vec2 uMouse;
   varying float vH;
   varying float vDist;
+  varying float vIntroAlpha;
 
   float waveY(float x, float z, float t) {
     float y = 0.0;
@@ -169,21 +178,39 @@ const waveVertexShader = /* glsl */ `
   }
 
   void main() {
-    vec3 pWave = position;
+    float introA = clamp(uIntroAssemble, 0.0, 1.0);
+    float localIntro = smoothstep(
+      0.0,
+      1.0,
+      clamp((introA - aIntroDelay) / max(0.001, 1.0 - aIntroDelay), 0.0, 1.0)
+    );
+    float helixBlend = 1.0 - smoothstep(0.0, 1.0, localIntro);
+    float spin = aIntroPhase + localIntro * 37.699 + uTime * 0.35;
+    float radius = helixBlend * (1.25 + 0.55 * sin(aIntroPhase * 1.7));
+    vec3 spiralOffset = vec3(
+      0.0,
+      cos(spin) * radius,
+      sin(spin) * radius * 1.45
+    );
+    vec3 basePosition = mix(aIntroPos, position, localIntro) + spiralOffset;
+    vec3 pWave = basePosition;
     float s = clamp(uScroll, 0.0, 1.0);
     pWave.x *= 1.0 + s * 0.6;
     pWave.z = pWave.z * (1.0 + s * 1.2) - s * 8.0;
-    pWave.y = waveY(position.x / (1.0 + s * 0.6), pWave.z, uTime) * (1.0 + s * 1.5);
+    pWave.y = waveY(basePosition.x / (1.0 + s * 0.6), pWave.z, uTime) * (1.0 + s * 1.5);
     float a = smoothstep(0.0, 1.0, clamp(uAssemble, 0.0, 1.0));
     vec3 p = mix(pWave, aTargetPos, a);
 
     vH = clamp((p.y + 3.0) / 6.0, 0.0, 1.0);
+    float introGate = smoothstep(0.0, 0.012, introA);
+    vIntroAlpha = introGate * smoothstep(aIntroDelay - 0.035, aIntroDelay + 0.045, introA);
     vec4 mv = modelViewMatrix * vec4(p, 1.0);
     vDist = -mv.z;
 
     float labW = smoothstep(0.02, 0.45, uLabReveal);
-    float sizeScale = mix(400.0, 180.0, a) * (1.0 - labW * 0.85);
-    gl_PointSize = clamp(aSize * (sizeScale / -mv.z), 1.0, 5.0);
+    float introBoost = mix(2.35, 1.0, introA);
+    float sizeScale = mix(520.0, 180.0, a) * introBoost * (1.0 - labW * 0.85);
+    gl_PointSize = clamp(aSize * (sizeScale / -mv.z), 1.25, 8.0);
     gl_Position = projectionMatrix * mv;
   }
 `;
@@ -193,6 +220,7 @@ const waveFragmentShader = /* glsl */ `
   uniform float uLabReveal;
   varying float vH;
   varying float vDist;
+  varying float vIntroAlpha;
 
   void main() {
     vec2  uv = gl_PointCoord - 0.5;
@@ -206,7 +234,7 @@ const waveFragmentShader = /* glsl */ `
 
     float fog = clamp((vDist - 25.0) / 40.0, 0.0, 1.0);
     float fadeLab = 1.0 - smoothstep(0.04, 0.82, uLabReveal);
-    float alpha = a * (0.55 + 0.45 * vH) * (1.0 - fog * 0.9) * fadeLab;
+    float alpha = a * (0.55 + 0.45 * vH) * (1.0 - fog * 0.9) * fadeLab * vIntroAlpha;
 
     gl_FragColor = vec4(col, alpha);
   }
@@ -243,6 +271,7 @@ const labFragmentShader = /* glsl */ `
   varying vec3 vWorldPos;
   uniform float uPopulate;
   void main(){
+    if(uPopulate <= 0.001) discard;
     vec2 uv = gl_PointCoord - 0.5;
     float r = dot(uv, uv);
     if(r > 0.25) discard;
@@ -302,10 +331,16 @@ function smoothstep(edge0: number, edge1: number, x: number) {
 type HeroDriveProps = {
   scrollProgress: number;
   labReveal: number;
+  introProgress: number;
   waveGeometry: THREE.BufferGeometry;
 };
 
-function HeroDrive({ scrollProgress, labReveal, waveGeometry }: HeroDriveProps) {
+function HeroDrive({
+  scrollProgress,
+  labReveal,
+  introProgress,
+  waveGeometry,
+}: HeroDriveProps) {
   const waveMatRef = useRef<THREE.ShaderMaterial>(null);
   const labMatRef = useRef<THREE.ShaderMaterial>(null);
   const mouseRef = useRef({ tx: 0, ty: 0, x: 0, y: 0 });
@@ -318,8 +353,16 @@ function HeroDrive({ scrollProgress, labReveal, waveGeometry }: HeroDriveProps) 
   const tmpCamRef = useRef(new THREE.Vector3());
   const tmpLookRef = useRef(new THREE.Vector3());
   const blendLookRef = useRef(new THREE.Vector3());
+  const camDirRef = useRef(new THREE.Vector3());
+  const camRightRef = useRef(new THREE.Vector3());
+  const camUpRef = useRef(new THREE.Vector3());
+  const parallaxOffsetRef = useRef(new THREE.Vector3());
+  const finalCamRef = useRef(new THREE.Vector3());
+  const finalLookRef = useRef(new THREE.Vector3());
   const labRevealRef = useRef(labReveal);
   labRevealRef.current = labReveal;
+  const introProgressRef = useRef(introProgress);
+  introProgressRef.current = introProgress;
 
   const targetBaseX = (TARGET_COL / (COLS - 1) - 0.5) * 50;
   const targetBaseZ = (TARGET_ROW / (ROWS - 1) - 0.5) * 38;
@@ -377,6 +420,7 @@ function HeroDrive({ scrollProgress, labReveal, waveGeometry }: HeroDriveProps) 
     () => ({
       uTime: { value: 0.0 },
       uScroll: { value: 0.0 },
+      uIntroAssemble: { value: 0.0 },
       uAssemble: { value: 0.0 },
       uLabReveal: { value: 0.0 },
       uMouse: { value: new THREE.Vector2(0, 0) },
@@ -441,6 +485,18 @@ function HeroDrive({ scrollProgress, labReveal, waveGeometry }: HeroDriveProps) 
     tmpCamRef.current.lerpVectors(camStartRef.current, camEndRef.current, zoomEased);
     tmpLookRef.current.lerpVectors(lookStartRef.current, lookEndRef.current, zoomEased);
 
+    const introSceneT = smoothstep(0.08, 1.0, introProgressRef.current);
+    tmpCamRef.current.lerpVectors(
+      new THREE.Vector3(0, 1.85, 24),
+      tmpCamRef.current,
+      introSceneT,
+    );
+    tmpLookRef.current.lerpVectors(
+      new THREE.Vector3(0, 0.2, 0),
+      tmpLookRef.current,
+      introSceneT,
+    );
+
     const assembleCam = smoothstep(0.12, 0.92, assemble);
     tmpCamRef.current.lerp(LAB_CAM_ENTRY_OUTSIDE, assembleCam);
     tmpLookRef.current.lerp(LAB_LOOK_ENTRY_OUTSIDE, assembleCam);
@@ -448,6 +504,7 @@ function HeroDrive({ scrollProgress, labReveal, waveGeometry }: HeroDriveProps) 
     if (waveMat) {
       waveMat.uniforms.uTime.value = t;
       waveMat.uniforms.uScroll.value = s1s2;
+      waveMat.uniforms.uIntroAssemble.value = introProgressRef.current;
       waveMat.uniforms.uAssemble.value = assemble;
       waveMat.uniforms.uLabReveal.value = lr;
       waveMat.uniforms.uMouse.value.set(m.x * mouseFactor, m.y * mouseFactor);
@@ -467,15 +524,34 @@ function HeroDrive({ scrollProgress, labReveal, waveGeometry }: HeroDriveProps) 
 
     const heroCam = tmpCamRef.current;
     const heroLook = tmpLookRef.current;
+    const camDir = camDirRef.current.subVectors(heroLook, heroCam).normalize();
+    const camRight = camRightRef.current.crossVectors(camDir, camera.up).normalize();
+    const camUp = camUpRef.current.crossVectors(camRight, camDir).normalize();
+    const mouseCameraWeight = smoothstep(0.0, 0.25, introSceneT) * (0.25 + 0.75 * (1 - lr));
+    parallaxOffsetRef.current
+      .copy(camRight)
+      .multiplyScalar(m.x * 0.22 * mouseCameraWeight)
+      .addScaledVector(camUp, m.y * 0.14 * mouseCameraWeight);
+
     if (lr < 0.001) {
-      camera.position.copy(heroCam);
-      camera.lookAt(heroLook);
+      finalCamRef.current.copy(heroCam).add(parallaxOffsetRef.current);
+      finalLookRef.current
+        .copy(heroLook)
+        .addScaledVector(camRight, m.x * 0.11 * mouseCameraWeight)
+        .addScaledVector(camUp, m.y * 0.075 * mouseCameraWeight);
+      camera.position.copy(finalCamRef.current);
+      camera.lookAt(finalLookRef.current);
     } else {
       const { pos: labPos, look: labLook } = sampleLabFlyCamera(lr, elapsed);
       const hb = smoothstep(0.0, 0.14, lr);
-      camera.position.lerpVectors(heroCam, labPos, hb);
+      finalCamRef.current.lerpVectors(heroCam, labPos, hb).add(parallaxOffsetRef.current);
       blendLookRef.current.lerpVectors(heroLook, labLook, hb);
-      camera.lookAt(blendLookRef.current);
+      finalLookRef.current
+        .copy(blendLookRef.current)
+        .addScaledVector(camRight, m.x * 0.085 * mouseCameraWeight)
+        .addScaledVector(camUp, m.y * 0.06 * mouseCameraWeight);
+      camera.position.copy(finalCamRef.current);
+      camera.lookAt(finalLookRef.current);
     }
   });
 
@@ -512,13 +588,19 @@ function HeroDrive({ scrollProgress, labReveal, waveGeometry }: HeroDriveProps) 
           />
         </points>
       ) : null}
-      <LabDust labReveal={labReveal} />
+      <LabDust labReveal={labReveal} introProgress={introProgress} />
     </>
   );
 }
 
 const FN = 950;
-function LabDust({ labReveal }: { labReveal: number }) {
+function LabDust({
+  labReveal,
+  introProgress,
+}: {
+  labReveal: number;
+  introProgress: number;
+}) {
   const labRevealRef = useRef(labReveal);
   labRevealRef.current = labReveal;
 
@@ -567,6 +649,7 @@ function LabDust({ labReveal }: { labReveal: number }) {
   }, [geo]);
 
   const inLab = labReveal > 0.03;
+  const introDustOpacity = smoothstep(0.985, 1, introProgress);
 
   return (
     <points geometry={geo} frustumCulled={false}>
@@ -575,7 +658,7 @@ function LabDust({ labReveal }: { labReveal: number }) {
         color={inLab ? 0x7a8aa0 : 0x99aacc}
         size={inLab ? 0.024 : 0.03}
         transparent
-        opacity={inLab ? 0.052 : 0.12}
+        opacity={(inLab ? 0.052 : 0.12) * introDustOpacity}
         sizeAttenuation
         depthWrite={false}
         blending={inLab ? THREE.NormalBlending : THREE.AdditiveBlending}
@@ -602,16 +685,55 @@ function SceneSetup() {
 function WaveGeometryProvider({ children }: { children: (geo: THREE.BufferGeometry) => ReactNode }) {
   const geometry = useMemo(() => {
     const positions = new Float32Array(N * 3);
+    const introPositions = new Float32Array(N * 3);
+    const introDelays = new Float32Array(N);
+    const introPhases = new Float32Array(N);
     const sizes = new Float32Array(N);
     const targetPos = new Float32Array(N * 3);
     let idx = 0;
+    const perStrand = Math.ceil(N / 4);
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
-        const x = (c / (COLS - 1) - 0.5) * 50;
-        const z = (r / (ROWS - 1) - 0.5) * 38;
+        const n1 = Math.abs(hash01(idx + 1));
+        const n2 = Math.abs(hash01(idx + 97));
+        const n3 = Math.abs(hash01(idx + 211));
+        const uBase = c / (COLS - 1) - 0.5;
+        const vBase = r / (ROWS - 1) - 0.5;
+        const organic = Math.max(0, 1 - Math.abs(uBase) * 1.18) * Math.max(0.28, 1 - Math.abs(vBase) * 0.72);
+        const x =
+          uBase * 50 +
+          (n1 - 0.5) * 0.36 * organic +
+          Math.sin(r * 0.37 + c * 0.11) * 0.11 * organic;
+        const z =
+          vBase * 38 +
+          (n2 - 0.5) * 0.42 * organic +
+          Math.sin(c * 0.29 + r * 0.17) * 0.15 * organic;
+        const v = vBase + (n3 - 0.5) * 0.035 * organic;
+        const strand = idx % 4;
+        const side = strand < 2 ? -1 : 1;
+        const helixPhase = strand % 2 === 0 ? 0 : Math.PI;
+        const strandIdx = Math.floor(idx / 4);
+        const strandT = Math.min(1, Math.max(0, strandIdx / Math.max(1, perStrand - 1)));
+        const phase =
+          strandT * Math.PI * 2 * 3.5 +
+          helixPhase +
+          side * 0.2;
+        const radius = 7.4 + Math.sin(strandT * Math.PI * 4) * 1.2;
         positions[idx * 3 + 0] = x;
         positions[idx * 3 + 1] = 0;
         positions[idx * 3 + 2] = z;
+        introPositions[idx * 3 + 0] =
+          side * (58 - strandT * 18) + Math.cos(phase) * radius * 0.12;
+        introPositions[idx * 3 + 1] =
+          Math.sin(phase) * radius + v * 1.35;
+        introPositions[idx * 3 + 2] =
+          Math.cos(phase) * radius * 0.86;
+        introDelays[idx] =
+          Math.max(
+            0,
+            Math.min(0.2, strandT * 0.16 + n2 * 0.045 - 0.012),
+          );
+        introPhases[idx] = phase;
         sizes[idx] = 0.6 + Math.random() * 0.7;
         if (idx === TARGET_IDX) sizes[idx] = 1.4;
         idx++;
@@ -620,6 +742,9 @@ function WaveGeometryProvider({ children }: { children: (geo: THREE.BufferGeomet
     fillLabShellTargets(targetPos, N);
     const geo = new THREE.BufferGeometry();
     geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    geo.setAttribute("aIntroPos", new THREE.BufferAttribute(introPositions, 3));
+    geo.setAttribute("aIntroDelay", new THREE.BufferAttribute(introDelays, 1));
+    geo.setAttribute("aIntroPhase", new THREE.BufferAttribute(introPhases, 1));
     geo.setAttribute("aSize", new THREE.BufferAttribute(sizes, 1));
     geo.setAttribute("aTargetPos", new THREE.BufferAttribute(targetPos, 3));
     return geo;
@@ -631,9 +756,11 @@ function WaveGeometryProvider({ children }: { children: (geo: THREE.BufferGeomet
 export function HeroScene({
   scrollProgress = 0,
   labReveal = 0,
+  introProgress = 1,
 }: {
   scrollProgress?: number;
   labReveal?: number;
+  introProgress?: number;
 }) {
   return (
     <div className="pointer-events-none absolute inset-0 z-0 min-h-[100dvh] w-full">
@@ -658,7 +785,12 @@ export function HeroScene({
         <SceneSetup />
         <WaveGeometryProvider>
           {(waveGeo) => (
-            <HeroDrive scrollProgress={scrollProgress} labReveal={labReveal} waveGeometry={waveGeo} />
+            <HeroDrive
+              scrollProgress={scrollProgress}
+              labReveal={labReveal}
+              introProgress={introProgress}
+              waveGeometry={waveGeo}
+            />
           )}
         </WaveGeometryProvider>
       </Canvas>

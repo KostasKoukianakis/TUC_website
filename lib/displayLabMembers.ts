@@ -16,6 +16,10 @@ export type LabTeamMember = {
   cvLabel: "CV" | "Short CV";
   /** Optional; defaults to lab members page when missing. */
   cvUrl?: string;
+  /** Optional LinkedIn profile for "Connect with". */
+  linkedinUrl?: string;
+  /** Profile photo under /public/images. */
+  photoUrl: string;
   initials: string;
 };
 
@@ -32,6 +36,9 @@ export const LAB_TEAM_MEMBERS: LabTeamMember[] = [
     tel: "+30 28210 37003",
     email: "mzervakis@tuc.gr",
     cvLabel: "CV",
+    cvUrl: "/professor_cv/M.Zervakis_CV_EN.pdf",
+    linkedinUrl: "https://www.linkedin.com/in/michalis-zervakis-78ba3771/",
+    photoUrl: "/images/Michalis%20Zervakis.webp",
     initials: "MZ",
   },
   {
@@ -43,6 +50,9 @@ export const LAB_TEAM_MEMBERS: LabTeamMember[] = [
     tel: "+30 28210 37216",
     email: "kmoirogiorgou@tuc.gr",
     cvLabel: "Short CV",
+    cvUrl: "/professor_cv/K.Moirogiorgou_ShortBio_EN.pdf",
+    linkedinUrl: "https://www.linkedin.com/in/dina-konstantia-moirogiorgou-09b4b332/",
+    photoUrl: "/images/Konstantia%20(Dina)%20Moirogiorgou.webp",
     initials: "KM",
   },
   {
@@ -54,6 +64,9 @@ export const LAB_TEAM_MEMBERS: LabTeamMember[] = [
     tel: "+30 28210 37216",
     email: "mpapadogiorgaki@tuc.gr",
     cvLabel: "CV",
+    cvUrl: "/professor_cv/M.Papadogiorgaki_CV_EN.pdf",
+    linkedinUrl: "https://www.linkedin.com/in/papadogiorgaki-maria-2b06b43b/",
+    photoUrl: "/images/Maria%20Papadogiorgaki.webp",
     initials: "MP",
   },
   {
@@ -66,6 +79,9 @@ export const LAB_TEAM_MEMBERS: LabTeamMember[] = [
     tel: "+30 28210 37216",
     email: "mantonakakis@tuc.gr",
     cvLabel: "Short CV",
+    cvUrl: "/professor_cv/M.Antonakakis_ShortBio_EN.pdf",
+    linkedinUrl: "https://www.linkedin.com/in/marios-antonakakis-89261372/",
+    photoUrl: "/images/Marios%20Antonakakis.webp",
     initials: "MA",
   },
   {
@@ -77,6 +93,9 @@ export const LAB_TEAM_MEMBERS: LabTeamMember[] = [
     tel: "+30 28210 37216",
     email: "glivanos@tuc.gr",
     cvLabel: "Short CV",
+    cvUrl: "/professor_cv/G.Livanos_ShortBio_EN.pdf",
+    linkedinUrl: "https://www.linkedin.com/in/livanosgeorge/",
+    photoUrl: "/images/Giorgos%20Livanos.webp",
     initials: "GL",
   },
 ];

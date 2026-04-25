@@ -7,7 +7,13 @@ import { HeroContactButton } from "@/components/HeroContactButton";
 import { HeroIntroLoader } from "@/components/HeroIntroLoader";
 import { HeroTeamMeet } from "@/components/HeroTeamMeet";
 
-const HeroScene = dynamic(
+type HeroSceneProps = {
+  scrollProgress?: number;
+  labReveal?: number;
+  introProgress?: number;
+};
+
+const HeroScene = dynamic<HeroSceneProps>(
   () => import("@/components/HeroScene").then((m) => m.HeroScene),
   {
     ssr: false,
@@ -60,11 +66,15 @@ const ETHOS_CARDS = [
  */
 export function Hero() {
   const [introDone, setIntroDone] = useState(false);
+  const [introProgress, setIntroProgress] = useState(0);
   const [progress, setProgress] = useState(0);
   const [pageScrollPercent, setPageScrollPercent] = useState(0);
   const [activeCard, setActiveCard] = useState<number | null>(null);
   const rootRef = useRef<HTMLElement>(null);
-  const onIntroComplete = useCallback(() => setIntroDone(true), []);
+  const onIntroComplete = useCallback(() => {
+    setIntroProgress(1);
+    setIntroDone(true);
+  }, []);
 
   useEffect(() => {
     if (!introDone) return;
@@ -141,9 +151,9 @@ export function Hero() {
   const ethosTextOut = 1 - seg(0.72, 0.86);
   const ethosTextOpacity = ethosTextIn * ethosTextOut;
 
-  const ethosCardsIn = seg(0.18, 0.28);
+  const ethosCardsIn = seg(0.12, 0.22);
   // Fade cards out once they have reached the top area.
-  const ethosCardsOut = 1 - seg(0.5, 0.66);
+  const ethosCardsOut = 1 - seg(0.42, 0.58);
   // Make fade-out steeper for a more pronounced disappearance.
   const ethosCardsOpacity = ethosCardsIn * Math.pow(ethosCardsOut, 1.8);
 
@@ -153,8 +163,8 @@ export function Hero() {
   const pubsIn = 0;
   const zoomT = seg(0.5, 0.92);
   /** Lab dot populate + fly path (same canvas as hero wave — see `HeroScene`). */
-  const labHandoffStart = 0.7;
-  const labHandoffEnd = 0.9;
+  const labHandoffStart = 0.66;
+  const labHandoffEnd = 0.92;
   const labReveal = seg(labHandoffStart, labHandoffEnd);
   /** Any lab fly / populate: kill CSS overlays — bloom uses `--color-neural-fog` (#dadada) and reads as a grey wash. */
   const labSceneActive = labReveal > 0.035;
@@ -171,13 +181,20 @@ export function Hero() {
   /** Top/bottom `from-app` vignettes lift black level over the canvas; hide during lab. */
   const heroVignetteOpacity = labSceneActive ? 0 : 1;
   /** Cinematic left title: short beat, then clears for center copy. */
-  const labTeamTitleIn = seg(0.58, 0.66);
-  const labTeamTitleOut = 1 - seg(0.64, 0.74);
-  const labTeamTitleOpacity = labTeamTitleIn * labTeamTitleOut;
+  const labTeamTitleIn = seg(0.54, 0.66);
+  const labTeamTitleOutThe = 1 - seg(0.685, 0.755);
+  const labTeamTitleOutLine = 1 - seg(0.715, 0.79);
+  const labTeamTitleTheVanish = smoothstep01(1 - labTeamTitleOutThe);
+  const labTeamTitleLineVanish = smoothstep01(1 - labTeamTitleOutLine);
+  const labTeamTitleTheOpacity = labTeamTitleIn * labTeamTitleOutThe;
+  const labTeamTitleLineOpacity = labTeamTitleIn * labTeamTitleOutLine;
+  const labTeamTitleOpacity = Math.max(labTeamTitleTheOpacity, labTeamTitleLineOpacity);
   const labTeamTitleLift = (1 - labTeamTitleIn) * 22;
+  const labTeamTitleTheLift = labTeamTitleLift - labTeamTitleTheVanish * 28;
+  const labTeamTitleLineLift = labTeamTitleLift - labTeamTitleLineVanish * 16;
   /** Centered documentary serif: two beats — rise + blur in, then out. */
-  const labNarrative1InT = seg(0.695, 0.762);
-  const labNarrative1Out = 1 - seg(0.772, 0.828);
+  const labNarrative1InT = seg(0.72, 0.8);
+  const labNarrative1Out = 1 - seg(0.835, 0.89);
   const labNarrative1Appear = smoothstep01(labNarrative1InT);
   const labNarrative1Vanish = smoothstep01(1 - labNarrative1Out);
   const labNarrative1Opacity = labNarrative1Appear * labNarrative1Out;
@@ -185,8 +202,8 @@ export function Hero() {
     (1 - labNarrative1Appear) * 32 - labNarrative1Vanish * 32;
   const labNarrative1Blur =
     (1 - labNarrative1Appear) * 11 + labNarrative1Vanish * 11;
-  const labNarrative2InT = seg(0.812, 0.888);
-  const labNarrative2Out = 1 - seg(0.9, 0.97);
+  const labNarrative2InT = seg(0.875, 0.94);
+  const labNarrative2Out = 1 - seg(0.96, 0.995);
   const labNarrative2Appear = smoothstep01(labNarrative2InT);
   const labNarrative2Vanish = smoothstep01(1 - labNarrative2Out);
   const labNarrative2Opacity = labNarrative2Appear * labNarrative2Out;
@@ -197,20 +214,29 @@ export function Hero() {
   const labNarrativeAny =
     labNarrative1Opacity > 0.04 || labNarrative2Opacity > 0.04;
   /** Meet-the-team strip + modal: fades in as the last narrative line exits. */
-  const labTeamMeetReveal = smoothstep01(seg(0.904, 0.968));
+  const labTeamMeetReveal = smoothstep01(seg(0.965, 0.998));
   const rightParallax = ((1 - ethosIn) * 20).toFixed(1);
   const leftParallax = ((1 - ethosIn) * 14).toFixed(1);
+  const introUiOpacity = introDone ? 1 : 0;
 
   return (
     <>
-      {!introDone && <HeroIntroLoader onComplete={onIntroComplete} />}
+      {!introDone && (
+        <HeroIntroLoader
+          onComplete={onIntroComplete}
+          onProgress={setIntroProgress}
+        />
+      )}
 
       <section
         ref={rootRef}
-        className="relative box-border min-h-[480dvh] overflow-clip bg-black text-off-white"
+        className="relative box-border min-h-[680dvh] overflow-clip bg-black text-off-white"
         aria-label="Introduction"
       >
-        <div className="hero-scroll-meter pointer-events-none fixed left-0 top-1/2 z-[70] -translate-y-1/2 transition-opacity duration-200">
+        <div
+          className="hero-scroll-meter pointer-events-none fixed left-0 top-1/2 z-[70] -translate-y-1/2 transition-opacity duration-500"
+          style={{ opacity: introUiOpacity }}
+        >
           <div className="font-hero-mono rounded-r-md border border-l-0 border-white/20 bg-black/45 px-2 py-1 text-[0.58rem] uppercase tracking-[0.16em] text-white/80 backdrop-blur-sm md:px-2.5">
             {pageScrollPercent.toFixed(2)}%
           </div>
@@ -218,7 +244,11 @@ export function Hero() {
 
         <div className="sticky top-0 h-[100dvh] overflow-hidden pt-[var(--header-height)]">
           <div className="pointer-events-none absolute inset-0 z-0">
-            <HeroScene scrollProgress={progress} labReveal={labReveal} />
+            <HeroScene
+              scrollProgress={progress}
+              labReveal={labReveal}
+              introProgress={introProgress}
+            />
           </div>
 
           <div
@@ -268,12 +298,25 @@ export function Hero() {
             aria-hidden={labTeamTitleOpacity < 0.04}
           >
             <div className="hero-lab-team-scan relative">
-              <h2 className="font-sans hero-lab-team-breathe text-[clamp(1.65rem,5.8vw,3.15rem)] font-semibold uppercase leading-[0.97] tracking-[0.12em] text-[#e8ecf0] [text-shadow:0_0_48px_rgba(130,170,210,0.2),0_2px_0_rgba(0,0,0,0.88),0_0_1px_rgba(255,255,255,0.32)] sm:tracking-[0.15em] md:text-[clamp(2rem,4.2vw,3.25rem)] md:tracking-[0.18em]">
-                The
-                <br />
-                Lab
-                <br />
-                Team
+              <h2 className="font-sans hero-lab-team-breathe text-[clamp(4.4rem,16vw,11.6rem)] font-semibold leading-[0.9] tracking-[0.035em] text-[#e8ecf0] [text-shadow:0_0_48px_rgba(130,170,210,0.2),0_2px_0_rgba(0,0,0,0.88),0_0_1px_rgba(255,255,255,0.32)] md:text-[clamp(5.2rem,13.4vw,13rem)]">
+                <span
+                  className="block transition-none"
+                  style={{
+                    opacity: labTeamTitleTheOpacity,
+                    transform: `translate3d(0, ${labTeamTitleTheLift}px, 0)`,
+                  }}
+                >
+                  The
+                </span>
+                <span
+                  className="mt-1 block transition-none"
+                  style={{
+                    opacity: labTeamTitleLineOpacity,
+                    transform: `translate3d(0, ${labTeamTitleLineLift}px, 0)`,
+                  }}
+                >
+                  Lab Team
+                </span>
               </h2>
               <p className="font-hero-mono mt-3 max-w-[19rem] text-[0.56rem] uppercase leading-relaxed tracking-[0.18em] text-[rgba(155,185,210,0.62)] sm:mt-4 sm:text-[0.6rem] sm:tracking-[0.19em] md:text-[0.64rem] md:tracking-[0.18em]">
                 Office 141.A33 · 1st floor · Science Building · University Campus,
@@ -286,12 +329,13 @@ export function Hero() {
             className="pointer-events-none absolute inset-0 z-[16] flex items-center justify-center px-[clamp(1.25rem,6vw,2.5rem)]"
             aria-hidden={!labNarrativeAny}
           >
-            <div className="relative mx-auto min-h-[5.5rem] w-full max-w-[min(42rem,94vw)]">
+            <div className="relative mx-auto min-h-[5.5rem] w-full max-w-[98vw]">
               <p
-                className="font-hero-serif absolute inset-x-0 top-1/2 mx-auto max-w-[min(42rem,94vw)] text-center text-[clamp(1.2rem,2.85vw,1.72rem)] font-normal leading-[1.48] tracking-[0.012em] text-white sm:leading-[1.52]"
+                className="font-hero-serif absolute inset-x-0 top-1/2 mx-auto max-w-[95vw] text-center text-[clamp(2.15rem,5.1vw,3.8rem)] font-medium leading-[1.36] tracking-[0.008em] text-white sm:leading-[1.42]"
                 style={{
                   opacity: labNarrative1Opacity,
                   transform: `translate3d(0, calc(-50% + ${labNarrative1Rise}px), 0)`,
+                  textWrap: "balance",
                   filter:
                     labNarrative1Blur > 0.2
                       ? `blur(${labNarrative1Blur.toFixed(2)}px)`
@@ -300,15 +344,15 @@ export function Hero() {
                     "0 0 2px rgba(0,0,0,1), 0 1px 3px rgba(0,0,0,1), 0 3px 16px rgba(0,0,0,0.92), 0 8px 36px rgba(0,0,0,0.65), 0 0 48px rgba(0,0,0,0.45)",
                 }}
               >
-                We follow the signal through noise and artifact—
-                <br />
-                from raw measurement to understanding we can defend.
+                We follow the signal through noise and artifact, from raw
+                measurement to understanding we can defend.
               </p>
               <p
-                className="font-hero-serif absolute inset-x-0 top-1/2 mx-auto max-w-[min(42rem,94vw)] text-center text-[clamp(1.2rem,2.85vw,1.72rem)] font-normal leading-[1.48] tracking-[0.012em] text-white sm:leading-[1.52]"
+                className="font-hero-serif absolute inset-x-0 top-1/2 mx-auto max-w-[95vw] text-center text-[clamp(2.15rem,5.1vw,3.8rem)] font-medium leading-[1.36] tracking-[0.008em] text-white sm:leading-[1.42]"
                 style={{
                   opacity: labNarrative2Opacity,
                   transform: `translate3d(0, calc(-50% + ${labNarrative2Rise}px), 0)`,
+                  textWrap: "balance",
                   filter:
                     labNarrative2Blur > 0.2
                       ? `blur(${labNarrative2Blur.toFixed(2)}px)`
@@ -317,8 +361,7 @@ export function Hero() {
                     "0 0 2px rgba(0,0,0,1), 0 1px 3px rgba(0,0,0,1), 0 3px 16px rgba(0,0,0,0.92), 0 8px 36px rgba(0,0,0,0.65), 0 0 48px rgba(0,0,0,0.45)",
                 }}
               >
-                Models, spectra, and code—tools we sharpen until they hold
-                <br />
+                Models, spectra, and code-tools we sharpen until they hold
                 when the world pushes back with noise and doubt.
               </p>
             </div>
@@ -354,7 +397,10 @@ export function Hero() {
             aria-hidden
           />
 
-          <div className="hero-bottom-animate pointer-events-none absolute bottom-8 left-1/2 z-20 flex -translate-x-1/2 flex-col items-center gap-2 md:bottom-10">
+          <div
+            className="hero-bottom-animate pointer-events-none absolute bottom-8 left-1/2 z-20 flex -translate-x-1/2 flex-col items-center gap-2 transition-opacity duration-700 md:bottom-10"
+            style={{ opacity: introUiOpacity }}
+          >
             <span className="font-hero-mono text-[0.52rem] uppercase tracking-[0.22em] text-[rgba(200,200,200,0.28)]">
               Scroll
             </span>
@@ -365,11 +411,14 @@ export function Hero() {
         <div className="absolute inset-x-0 top-0 z-10 h-[300dvh]">
           <section className="pointer-events-none flex h-[100dvh] items-start justify-center p-[20%] pt-[12vh] md:pt-[10vh]">
             <div
-              className="relative flex w-full max-w-4xl flex-col items-center text-center"
+            className="relative flex w-full max-w-4xl flex-col items-center text-center transition-all duration-[1800ms] ease-wqf"
               style={{
                 opacity:
+                  introUiOpacity *
                   heroFade *
                   (1 - Math.max(ethosTextOpacity, ethosCardsOpacity)),
+              transform: introDone ? "translate3d(0, 0, 0)" : "translate3d(0, 24px, 0)",
+              filter: introDone ? "blur(0px)" : "blur(12px)",
               }}
             >
               <div
